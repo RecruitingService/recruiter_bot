@@ -146,11 +146,13 @@ educationScene.enter(ctx => {
         m.inlineKeyboard([
             [
                 m.callbackButton(education[0], education[0]),
+                m.callbackButton(education[3], education[3])
+            ],
+            [
                 m.callbackButton(education[1], education[1])
             ],
             [
-                m.callbackButton(education[2], education[2]),
-                m.callbackButton(education[3], education[3])
+                m.callbackButton(education[2], education[2])
             ],
             [
                 m.callbackButton(education[4], education[4]),
@@ -324,9 +326,24 @@ periodScene.enter(ctx => {
 });
 periodScene.action(period, ctx => {
     globalObj[ctx.update.callback_query.from.id].period = ctx.match;
-    ctx.scene.enter('thanks');
+    ctx.scene.enter('description');
 });
 periodScene.on('message', ctx => ctx.reply(texts.period));
+
+/**
+ * Start Scene
+ * @type {BaseScene}
+ */
+
+const descriptionScene = new Scene('description');
+descriptionScene.enter(ctx => {
+    return ctx.reply(texts.description)
+});
+descriptionScene.on('message', ctx => {
+    const key = ctx.message.chat.id.toString();
+    globalObj[key].description = ctx.message.text;
+    ctx.scene.enter('final');
+});
 
 /**
  * Thanks
@@ -356,6 +373,7 @@ thanksScene.on('message', ctx => ctx.reply(texts.thanks));
 
 const finalScene = new Scene('final');
 finalScene.enter(ctx => {
+    console.log(ctx.message.chat.id);
     fs.readFile('client_secret.json', (err, content) => {
         if (err) {
             console.log('Error loading client secret file: ' + err);
@@ -365,24 +383,25 @@ finalScene.enter(ctx => {
         // Authorize a client with the loaded credentials, then call the Google Sheets API.
         authorize(JSON.parse(content))
             .then(doc => {
+                console.log(globalObj);
                 addRow(doc, [
-                    globalObj[ctx.update.callback_query.from.id].phone,
-                    globalObj[ctx.update.callback_query.from.id].fullname,
-                    globalObj[ctx.update.callback_query.from.id].vacancy,
-                    globalObj[ctx.update.callback_query.from.id].city,
-                    globalObj[ctx.update.callback_query.from.id].salary,
-                    globalObj[ctx.update.callback_query.from.id].experience,
-                    globalObj[ctx.update.callback_query.from.id].education,
-                    globalObj[ctx.update.callback_query.from.id].citizen,
-                    globalObj[ctx.update.callback_query.from.id].age,
-                    globalObj[ctx.update.callback_query.from.id].sex,
-                    globalObj[ctx.update.callback_query.from.id].term,
-                    globalObj[ctx.update.callback_query.from.id].workType,
-                    globalObj[ctx.update.callback_query.from.id].period,
-                    globalObj[ctx.update.callback_query.from.id].thanks,
+                    globalObj[ctx.message.chat.id].phone,
+                    globalObj[ctx.message.chat.id].fullname,
+                    globalObj[ctx.message.chat.id].vacancy,
+                    globalObj[ctx.message.chat.id].city,
+                    globalObj[ctx.message.chat.id].salary,
+                    globalObj[ctx.message.chat.id].experience,
+                    globalObj[ctx.message.chat.id].education,
+                    globalObj[ctx.message.chat.id].citizen,
+                    globalObj[ctx.message.chat.id].age,
+                    globalObj[ctx.message.chat.id].sex,
+                    globalObj[ctx.message.chat.id].term,
+                    globalObj[ctx.message.chat.id].workType,
+                    globalObj[ctx.message.chat.id].period,
+                    globalObj[ctx.message.chat.id].description,
                 ])
                     .then(doc => {
-                        delete globalObj[ctx.update.callback_query.from.id];
+                        delete globalObj[ctx.message.chat.id];
                         ctx.scene.leave('final');
                         return ctx.reply(texts.final);
                     })
@@ -399,7 +418,7 @@ const stage = new Stage([
     salaryScene, workTypeScene, periodScene,
     citizenScene, educationScene, experienceScene,
     termScene, sexScene, ageScene,
-    thanksScene, finalScene
+    thanksScene, finalScene, descriptionScene
 ]);
 bot.use(session());
 bot.use(stage.middleware());
