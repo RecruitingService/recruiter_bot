@@ -399,6 +399,7 @@ finalScene.enter(ctx => {
                     globalObj[ctx.message.chat.id].workType,
                     globalObj[ctx.message.chat.id].period,
                     globalObj[ctx.message.chat.id].description,
+                    globalObj[ctx.message.chat.id].id
                 ])
                     .then(doc => {
                         delete globalObj[ctx.message.chat.id];
