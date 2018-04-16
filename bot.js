@@ -1,11 +1,14 @@
 const Telegraf = require('telegraf');
 const fs = require('fs');
 const session = require('telegraf/session');
+const moment = require('moment');
 const Markup = require('telegraf/markup');
 const Stage = require('telegraf/stage');
 const Scene = require('telegraf/scenes/base');
 const Extra = require('telegraf/extra');
 const { authorize } = require('./googleAuth');
+require('./database/connection');
+const { VacanciesModel } = require('./database/models');
 const { addRow } = require('./googleQueries');
 require('dotenv').config();
 const texts = require('./texts');
@@ -373,44 +376,31 @@ thanksScene.on('message', ctx => ctx.reply(texts.thanks));
 
 const finalScene = new Scene('final');
 finalScene.enter(ctx => {
-    console.log(ctx.message.chat.id);
-    fs.readFile('client_secret.json', (err, content) => {
-        if (err) {
-            console.log('Error loading client secret file: ' + err);
-            return;
-        }
-
-        // Authorize a client with the loaded credentials, then call the Google Sheets API.
-        authorize(JSON.parse(content))
-            .then(doc => {
-                console.log(globalObj);
-                addRow(doc, [
-                    globalObj[ctx.message.chat.id].phone,
-                    globalObj[ctx.message.chat.id].fullname,
-                    globalObj[ctx.message.chat.id].vacancy,
-                    globalObj[ctx.message.chat.id].city,
-                    globalObj[ctx.message.chat.id].salary,
-                    globalObj[ctx.message.chat.id].experience,
-                    globalObj[ctx.message.chat.id].education,
-                    globalObj[ctx.message.chat.id].citizen,
-                    globalObj[ctx.message.chat.id].age,
-                    globalObj[ctx.message.chat.id].sex,
-                    globalObj[ctx.message.chat.id].term,
-                    globalObj[ctx.message.chat.id].workType,
-                    globalObj[ctx.message.chat.id].period,
-                    globalObj[ctx.message.chat.id].description,
-                    globalObj[ctx.message.chat.id].id
-                ])
-                    .then(doc => {
-                        delete globalObj[ctx.message.chat.id];
-                        ctx.scene.leave('final');
-                        return ctx.reply(texts.final);
-                    })
-                    .catch(console.error);
-            })
-            .catch(console.error)
+    VacanciesModel.create({
+        phone: globalObj[ctx.message.chat.id].phone,
+        fullname: globalObj[ctx.message.chat.id].fullname,
+        vacancy: {
+            title: globalObj[ctx.message.chat.id].vacancy,
+            city: globalObj[ctx.message.chat.id].city,
+            salary: globalObj[ctx.message.chat.id].salary,
+            experience: globalObj[ctx.message.chat.id].experience,
+            education: globalObj[ctx.message.chat.id].education,
+            citizen: globalObj[ctx.message.chat.id].citizen,
+            age: globalObj[ctx.message.chat.id].age,
+            sex: globalObj[ctx.message.chat.id].sex,
+            term: globalObj[ctx.message.chat.id].term,
+            workType: globalObj[ctx.message.chat.id].workType,
+            period: globalObj[ctx.message.chat.id].period,
+            description: globalObj[ctx.message.chat.id].description
+        },
+        chatId: globalObj[ctx.message.chat.id].id,
+        createdAt: moment(new Date()).unix()
+    }, err => {
+        if (err) winston.log('error', err);
+        delete globalObj[ctx.message.chat.id];
+        ctx.scene.leave('final');
+        return ctx.reply(texts.final);
     });
-
 });
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
